@@ -28,45 +28,50 @@ NBATCH = 128
 ITERATIONS = 10000
 NUMERICAL_METHOD = 'RK45'
 
+# Neurodynamic optimization 2008 XIA
+# Model a CCO problem by an ODE system
+def projection(y):
+    x, u = y[:nx], y[nx:]
+    xp, up = np.clip(x, a_min=0, a_max=2), np.clip(u, a_min=0, a_max=None)
+    return np.concatenate([xp, up])  
 
-# 2008 XIA
-def ODE_XIA():
-    def f(x):
-        return -P1@x
+def f(x):
+    return -P1@x
 
-    def g(x):
-        tv = jnp.linalg.norm(Sigma_sqrt@x, 2)
-        output = psi*tv-P2@x
-        return output
+def g(x):
+    output_1 = psi*jnp.linalg.norm(Sigma_sqrt@x, 2)-P2@x
+    # output_2 = A@x-b
+    output = jnp.array([output_1])
+    return output
 
-    df = fgrad(f)
-    dg = jacrev(g)
+df = fgrad(f)
+dg = jacrev(g)
 
-    def ODE(t, y):
-        x, u = y[:nx], y[nx:]
-        xp, up = jnp.clip(x, a_min=0, a_max=2), jnp.clip(u, a_min=0, a_max=None)
-        dx = -x+xp-df(xp)-up*dg(xp)
-        du = -u+up+g(xp)
-        dy = jnp.concatenate([dx, du])
-        return dy
-    ODE = jit(ODE)
+def G(y):
+    x, u = y[:nx], y[nx:]
+    output_1 = df(x) + u@dg(x)
+    output_2 = -g(x)
+    return jnp.concatenate([output_1, output_2])
 
-    def projection(y):
-        x, u = y[:nx], y[nx:]
-        xp, up = jnp.clip(x, a_min=0, a_max=2), jnp.clip(u, a_min=0, a_max=None)
-        return np.concatenate([xp, up])
+def projection(y):
+    x, u = y[:nx], y[nx:]
+    xp, up = np.clip(x, a_min=0, a_max=2), np.clip(u, a_min=0, a_max=None)
+    return np.concatenate([xp, up])
 
-    def evalutation(y):
-        x, u = y[:nx], y[nx:]
-        xp, up = np.clip(x, a_min=0, a_max=2), np.clip(u, a_min=0, a_max=None)
-        dx = -x+xp-df(xp)-up*dg(xp)
-        du = -u+up+g(xp)
-        dy = np.concatenate([dx, du])
-        return np.linalg.norm(dy, 2)
+def ODE(t, y):
+    x, u = y[:nx], y[nx:]
+    xp, up = jnp.clip(x, a_min=0, a_max=2), jnp.clip(u, a_min=0, a_max=None)
+    yp = jnp.concatenate([xp, up])
+
+    dy = -G(yp)+yp-y
+    return dy
+ODE = jit(ODE)
+
+def evalutation(y):
+    x, u = y[:nx], y[nx:]
+    gv = np.array(g(x))
+    return f(x)+100*np.linalg.norm(np.clip(gv, a_min=0, a_max=None), 2)
       
-     return ODE
-  
-NZ=2*n
 class FNN(nn.Module):
     def __init__(self, z0):
         super(FNN, self).__init__()
@@ -102,7 +107,7 @@ class FNN(nn.Module):
         x = self.z0 + (1 - torch.exp(-(t-0)))*x
         return x
 
-
+# Reformulate a CCO problem as neural network training
 class NN_NOP:
     def __init__(self, z0, time_range, P, ODE, C_epsilon):
         self.z0 = np.array(z0)
