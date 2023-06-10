@@ -12,7 +12,7 @@ The script reformulates a CCO problem as a neural network learning problem.
 
 It corresponds to Sections 2 and 3.
 
-## Problem data.zip
+## Algorithm 1 to solve multiple alpha.py
 The script solves the CCO problem with multiple confidence levels.
 
 It implements the Algorithm 1 in Section 4.
