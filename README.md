@@ -9,10 +9,12 @@ This file contains the problem data $p_1$, $p_2$, $\Sigma$ for equation (21) in 
 
 ## Reformulation.py
 The script reformulates a CCO problem as a neural network learning problem.
-It corresponds to Sections 2 and 3 of the paper.
+
+It corresponds to Sections 2 and 3.
 
 ## Problem data.zip
 The script solves the CCO problem with multiple confidence levels.
-It implements Algorithm 1 in Section 4 of paper.
+
+It implements the Algorithm 1 in Section 4.
 
 
